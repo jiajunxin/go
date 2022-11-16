@@ -1,15 +1,11 @@
 package big
 
-import (
-	"fmt"
-)
-
-// MultiExp sets z1 = x**y1 mod |m|, z2 = x**y2 mod |m| ... (i.e. the sign of m is ignored), and returns z1, z2.
+// DoubleExp sets z1 = x**y1 mod |m|, z2 = x**y2 mod |m| ... (i.e. the sign of m is ignored), and returns z1, z2.
 // If m == nil or m == 0, z = x**y unless y <= 0 then z = 1. If m != 0, y < 0,
 // and x and m are not relatively prime, z is unchanged and nil is returned.
 //
-// MultiExp is not a cryptographically constant-time operation.
-func MultiExp(x, y1, y2, m *Int) []*Int {
+// DoubleExp is not a cryptographically constant-time operation.
+func DoubleExp(x, y1, y2, m *Int) []*Int {
 	// See Knuth, volume 2, section 4.6.3.
 	var z1, z2 Int
 	ret := make([]*Int, 2)
@@ -86,13 +82,8 @@ func MultiExp(x, y1, y2, m *Int) []*Int {
 	}
 	// y > 1
 
-	// If the exponent is large, we use the Montgomery method for odd values,
-	// and a 4-bit, windowed exponentiation for powers of two,
-	// and a CRT-decomposed Montgomery method for the remaining values
-	// (even values times non-trivial odd values, which decompose into one
-	// instance of each of the first two cases).
 	if mWords[0]&1 == 1 {
-		return multiexpNNMontgomery(xWords, y1Words, y2Words, mWords)
+		return doubleexpNNMontgomery(xWords, y1Words, y2Words, mWords)
 	}
 
 	z1.abs.rem(x.abs, m.abs)
@@ -100,9 +91,9 @@ func MultiExp(x, y1, y2, m *Int) []*Int {
 	return ret
 }
 
-// multiexpNNMontgomery calculates x**y1 mod m and x**y2 mod m using a fixed, 4-bit window.
+// doubleexpNNMontgomery calculates x**y1 mod m and x**y2 mod m
 // Uses Montgomery representation.
-func multiexpNNMontgomery(x, y1, y2, m nat) []*Int {
+func doubleexpNNMontgomery(x, y1, y2, m nat) []*Int {
 	numWords := len(m)
 
 	// We want the lengths of x and m to be equal.
@@ -148,30 +139,67 @@ func multiexpNNMontgomery(x, y1, y2, m nat) []*Int {
 	powers[0] = powers[0].montgomery(one, RR, m, k0, numWords)
 	powers[1] = powers[1].montgomery(x, RR, m, k0, numWords)
 
-	return multimontgomery(RR, m, powers[0], powers[1], k0, numWords, []nat{y1, y2})
-}
+	y1New, y2New, y3 := gcb(y1, y2)
+	z := multimontgomery(RR, m, powers[0], powers[1], k0, numWords, []nat{y1New, y2New, y3})
+	// calculate z1 and z2
+	var temp nat
+	temp = temp.make(numWords)
+	temp = temp.montgomery(z[0], z[2], m, k0, numWords)
+	z[0], temp = temp, z[0]
+	temp = temp.montgomery(z[1], z[2], m, k0, numWords)
+	z[1], temp = temp, z[1]
+	z = z[:2] //z3 is useless now
+	// convert to regular number
+	for i := range z {
+		temp = temp.montgomery(z[i], one, m, k0, numWords)
+		z[i], temp = temp, z[i]
+	}
+	for i := range z {
+		// One last reduction, just in case.
+		// See golang.org/issue/13907.
+		if z[i].cmp(m) >= 0 {
+			// Common case is m has high bit set; in that case,
+			// since zz is the same length as m, there can be just
+			// one multiple of m to remove. Just subtract.
+			// We think that the subtract should be sufficient in general,
+			// so do that unconditionally, but double-check,
+			// in case our beliefs are wrong.
+			// The div is not expected to be reached.
+			z[i] = z[i].sub(z[i], m)
+			if z[i].cmp(m) >= 0 {
+				_, z[i] = nat(nil).div(nil, z[i], m)
+			}
+		}
+	}
 
-func multimontgomery(RR, m, power0, power1 nat, k0 Word, numWords int, y []nat) []*Int {
-	ret := make([]*Int, len(y))
+	ret := make([]*Int, 2)
 	for i := range ret {
 		ret[i] = new(Int)
 	}
 
+	// normlize and set value
+	for i := range z {
+		z[i].norm()
+		ret[i].abs = z[i]
+		ret[i].neg = false
+	}
+	return ret
+}
+
+// multimontgomery calculates the modular montgomery exponent with result not normlized
+func multimontgomery(RR, m, power0, power1 nat, k0 Word, numWords int, y []nat) []nat {
 	// initialize each value to be 1 (Montgomery 1)
 	z := make([]nat, len(y))
-	for i := range ret {
+	for i := range z {
 		z[i] = z[i].make(numWords)
 		copy(z[i], power0)
 	}
 
-	fmt.Println("test in big.Int")
 	var squaredPower, temp nat
 	squaredPower = squaredPower.make(numWords)
 	temp = temp.make(numWords)
 	copy(squaredPower, power1)
-	fmt.Println("squaredPower = ", squaredPower.String())
-	fmt.Println("temp = ", temp.String())
-	fmt.Println("len(y[0]) = ", len(y[0]))
+	//fmt.Println("squaredPower = ", squaredPower.String())
 
 	maxLen := 1
 	for i := range y {
@@ -197,63 +225,31 @@ func multimontgomery(RR, m, power0, power1 nat, k0 Word, numWords int, y []nat) 
 			squaredPower, temp = temp, squaredPower
 		}
 	}
-	// one = 1, with equal length to that of m
-	one := make(nat, numWords)
-	one[0] = 1
-	// convert to regular number
-	for i := range z {
-		temp = temp.montgomery(z[i], one, m, k0, numWords)
-		z[i], temp = temp, z[i]
-	}
-	fmt.Println("squaredPower = ", squaredPower.String())
-	fmt.Println("temp = ", temp.String())
-	for i := range z {
-		// One last reduction, just in case.
-		// See golang.org/issue/13907.
-		if z[i].cmp(m) >= 0 {
-			// Common case is m has high bit set; in that case,
-			// since zz is the same length as m, there can be just
-			// one multiple of m to remove. Just subtract.
-			// We think that the subtract should be sufficient in general,
-			// so do that unconditionally, but double-check,
-			// in case our beliefs are wrong.
-			// The div is not expected to be reached.
-			z[i] = z[i].sub(z[i], m)
-			if z[i].cmp(m) >= 0 {
-				_, z[i] = nat(nil).div(nil, z[i], m)
-			}
-		}
-	}
-
-	// normlize and set value
-	for i := range z {
-		z[i].norm()
-		ret[i].abs = z[i]
-		ret[i].neg = false
-	}
-	return ret
+	return z
 }
 
-func GCB(a, b nat) nat {
+// GCB inputs two positive integer a and b, calculates the greatest common
+func gcb(a, b nat) (nat, nat, nat) {
 	var maxBitLen int
 	if len(a) > len(b) {
 		maxBitLen = len(b)
 	} else {
 		maxBitLen = len(a)
 	}
-	fmt.Println("test 0 ")
-	var bitStingsRet nat
+	var aNew, bNew, c nat
 
-	bitStingsRet = bitStingsRet.make(maxBitLen)
+	aNew = aNew.make(maxBitLen)
+	bNew = bNew.make(maxBitLen)
+	c = c.make(maxBitLen)
 	for i := 0; i < maxBitLen; i++ {
-		bitStingsRet[i] = CommonBits(a[i], b[i])
-		a[i] = a[i] - bitStingsRet[i]
-		b[i] = b[i] - bitStingsRet[i]
+		c[i] = commonBits(a[i], b[i])
+		aNew[i] = a[i] - c[i]
+		bNew[i] = b[i] - c[i]
 	}
-	return bitStingsRet
+	return aNew, bNew, c
 }
 
-func CommonBits(a, b Word) Word {
+func commonBits(a, b Word) Word {
 	var ret uint
 	ret = 0
 	var mask uint
