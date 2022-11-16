@@ -14,9 +14,7 @@ func DoubleExp(x, y1, y2, m *Int) []*Int {
 
 	xWords := x.abs
 	if len(xWords) == 0 {
-		z1.SetInt64(1)
-		z2.SetInt64(1)
-		return ret
+		return allIntOne(2)
 	}
 	if x.neg || y1.neg || y2.neg || m.neg {
 		z1.Exp(x, y2, m)
@@ -24,23 +22,17 @@ func DoubleExp(x, y1, y2, m *Int) []*Int {
 		return ret
 	}
 	if len(xWords) == 1 && xWords[0] == 1 {
-		z1.SetInt64(1)
-		z2.SetInt64(1)
-		return ret
+		return allIntOne(2)
 	}
 
 	// x > 1
 
 	if m == nil {
-		z1.SetInt64(1)
-		z2.SetInt64(1)
-		return ret
+		return allIntOne(2)
 	}
 	mWords := m.abs // m.abs may be nil for m == 0
 	if len(mWords) == 0 {
-		z1.SetInt64(1)
-		z2.SetInt64(1)
-		return ret
+		return allIntOne(2)
 	}
 	// m > 1
 	y1Words := y1.abs
@@ -91,6 +83,16 @@ func DoubleExp(x, y1, y2, m *Int) []*Int {
 	return ret
 }
 
+// allIntOne inputs a slice length and returns a slice of *Int, with all values "1"
+func allIntOne(length int) []*Int {
+	ret := make([]*Int, length)
+	for i := range ret {
+		ret[i] = new(Int)
+		ret[i].SetInt64(1)
+	}
+	return ret
+}
+
 // doubleexpNNMontgomery calculates x**y1 mod m and x**y2 mod m
 // Uses Montgomery representation.
 func doubleexpNNMontgomery(x, y1, y2, m nat) []*Int {
@@ -133,9 +135,8 @@ func doubleexpNNMontgomery(x, y1, y2, m nat) []*Int {
 	one := make(nat, numWords)
 	one[0] = 1
 
-	const n = 4
 	// powers[i] contains x^i
-	var powers [1 << n]nat
+	var powers [2]nat
 	powers[0] = powers[0].montgomery(one, RR, m, k0, numWords)
 	powers[1] = powers[1].montgomery(x, RR, m, k0, numWords)
 
