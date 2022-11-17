@@ -231,21 +231,30 @@ func multimontgomery(RR, m, power0, power1 nat, k0 Word, numWords int, y []nat) 
 
 // GCB inputs two positive integer a and b, calculates the greatest common
 func gcb(a, b nat) (nat, nat, nat) {
-	var maxBitLen int
+	var minBitLen int
 	if len(a) > len(b) {
-		maxBitLen = len(b)
+		minBitLen = len(b)
 	} else {
-		maxBitLen = len(a)
+		minBitLen = len(a)
 	}
 	var aNew, bNew, c nat
 
-	aNew = aNew.make(maxBitLen)
-	bNew = bNew.make(maxBitLen)
-	c = c.make(maxBitLen)
-	for i := 0; i < maxBitLen; i++ {
+	aNew = aNew.make(len(a))
+	bNew = bNew.make(len(b))
+	c = c.make(minBitLen)
+	for i := 0; i < minBitLen; i++ {
 		c[i] = commonBits(a[i], b[i])
 		aNew[i] = a[i] - c[i]
 		bNew[i] = b[i] - c[i]
+	}
+	if len(a) > len(b) {
+		for i := minBitLen; i < len(a); i++ {
+			aNew[i] = a[i]
+		}
+	} else {
+		for i := minBitLen; i < len(b); i++ {
+			bNew[i] = b[i]
+		}
 	}
 	return aNew, bNew, c
 }
@@ -456,7 +465,7 @@ func fourfoldExpNNMontgomery(x, m nat, y []*Int) []*Int {
 	yNew[1], yNew[3], cm13 = gcb(yNew[1], yNew[3])
 	yNew[0], yNew[3], cm03 = gcb(yNew[0], yNew[3])
 	yNew[1], yNew[2], cm12 = gcb(yNew[1], yNew[2])
-	//                                                                    0-4	  5     6      7       8     9     10     11    12    13    14
+	//                                                                  0-4	  5     6      7       8     9     10     11    12    13    14
 	z := multimontgomery(RR, m, powers[0], powers[1], k0, numWords, append(yNew, cm012, cm013, cm023, cm123, cm01, cm23, cm02, cm13, cm03, cm12))
 	// calculate the actual values
 	var temp nat
