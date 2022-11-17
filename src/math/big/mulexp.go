@@ -456,7 +456,7 @@ func fourfoldExpNNMontgomery(x, m nat, y []*Int) []*Int {
 	yNew[1], yNew[3], cm13 = gcb(yNew[1], yNew[3])
 	yNew[0], yNew[3], cm03 = gcb(yNew[0], yNew[3])
 	yNew[1], yNew[2], cm12 = gcb(yNew[1], yNew[2])
-	//                                                                  0-4	  5     6      7       8     9     10     11    12    13    14
+	//                                                                    0-4	  5     6      7       8     9     10     11    12    13    14
 	z := multimontgomery(RR, m, powers[0], powers[1], k0, numWords, append(yNew, cm012, cm013, cm023, cm123, cm01, cm23, cm02, cm13, cm03, cm12))
 	// calculate the actual values
 	var temp nat
@@ -480,47 +480,47 @@ func fourfoldExpNNMontgomery(x, m nat, y []*Int) []*Int {
 	temp = temp.montgomery(z[1], z[4], m, k0, numWords)
 	z[1], temp = temp, z[1]
 	temp = temp.montgomery(z[1], z[5], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[1], temp = temp, z[1]
 	temp = temp.montgomery(z[1], z[6], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[1], temp = temp, z[1]
 	temp = temp.montgomery(z[1], z[8], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[1], temp = temp, z[1]
 	temp = temp.montgomery(z[1], z[9], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[1], temp = temp, z[1]
 	temp = temp.montgomery(z[1], z[12], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[1], temp = temp, z[1]
 	temp = temp.montgomery(z[1], z[14], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[1], temp = temp, z[1]
 	// retrive common values for third number
 	temp = temp.montgomery(z[2], z[4], m, k0, numWords)
-	z[1], temp = temp, z[1]
+	z[2], temp = temp, z[2]
 	temp = temp.montgomery(z[2], z[5], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[2], temp = temp, z[2]
 	temp = temp.montgomery(z[2], z[7], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[2], temp = temp, z[2]
 	temp = temp.montgomery(z[2], z[8], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[2], temp = temp, z[2]
 	temp = temp.montgomery(z[2], z[10], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[2], temp = temp, z[2]
 	temp = temp.montgomery(z[2], z[11], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[2], temp = temp, z[2]
 	temp = temp.montgomery(z[2], z[14], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[2], temp = temp, z[2]
 	// retrive common values for four number
 	temp = temp.montgomery(z[3], z[4], m, k0, numWords)
-	z[1], temp = temp, z[1]
+	z[3], temp = temp, z[3]
 	temp = temp.montgomery(z[3], z[6], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[3], temp = temp, z[3]
 	temp = temp.montgomery(z[3], z[7], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[3], temp = temp, z[3]
 	temp = temp.montgomery(z[3], z[8], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[3], temp = temp, z[3]
 	temp = temp.montgomery(z[3], z[10], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[3], temp = temp, z[3]
 	temp = temp.montgomery(z[3], z[12], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[3], temp = temp, z[3]
 	temp = temp.montgomery(z[3], z[13], m, k0, numWords)
-	z[0], temp = temp, z[0]
+	z[3], temp = temp, z[3]
 
 	z = z[:4] //the rest are useless now
 
