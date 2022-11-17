@@ -1,5 +1,12 @@
 package big
 
+type PreTable struct {
+	Base      *Int
+	Modulos   *Int
+	TableSize *Int
+	table     []nat
+}
+
 // DoubleExp sets z1 = x**y1 mod |m|, z2 = x**y2 mod |m| ... (i.e. the sign of m is ignored), and returns z1, z2.
 // If m == nil or m == 0, z = x**y unless y <= 0 then z = 1. If m != 0, y < 0,
 // and x and m are not relatively prime, z is unchanged and nil is returned.
@@ -407,6 +414,34 @@ func FourFoldExp(x, m *Int, y []*Int) []*Int {
 		panic("The input modular is not a odd number")
 	}
 	return fourfoldExpNNMontgomery(xWords, mWords, y)
+}
+
+func PreCompute(base, m, tableSize *Int) *PreTable {
+	if len(base.abs) == 0 {
+		return nil
+	}
+	if base.neg || m.neg {
+		return nil
+	}
+	if len(base.abs) == 1 && base.abs[0] == 1 {
+		return nil
+	}
+
+	// x > 1
+	if m == nil {
+		return nil
+	}
+	mWords := m.abs // m.abs may be nil for m == 0
+	if len(mWords) == 0 {
+		return nil
+	}
+	var table PreTable
+	table.Base = base
+	table.Modulos = m
+	table.TableSize = tableSize
+	// calculate the table
+
+	return &table
 }
 
 // fourfoldExpNNMontgomery calculates x**y1 mod m and x**y2 mod m x**y3 mod m and x**y4 mod m
