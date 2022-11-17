@@ -288,6 +288,14 @@ func fourfoldGcb(input []nat) []nat {
 		output[2][i] = input[2][i] - output[4][i]
 		output[3][i] = input[3][i] - output[4][i]
 	}
+	for i := 0; i < 4; i++ {
+		if len(output[i]) > minBitLen {
+			for j := minBitLen; j < len(output[i]); j++ {
+				output[i][j] = input[i][j]
+			}
+		}
+	}
+
 	return output[:]
 }
 
