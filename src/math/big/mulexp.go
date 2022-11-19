@@ -286,6 +286,7 @@ func multimontgomeryWithPreComputeTable(RR, m, power0, power1 nat, k0 Word, numW
 // multimontgomery calculates the modular montgomery exponent with result not normlized
 func multimontgomeryWithPreComputeTableWithChan(RR, m, power0, power1 nat, k0 Word, numWords int, y []nat, pretable *PreTable, c chan []nat) {
 	startingTime := time.Now().UTC()
+
 	// initialize each value to be 1 (Montgomery 1)
 	z := make([]nat, len(y))
 	for i := range z {
@@ -323,7 +324,10 @@ func multimontgomeryWithPreComputeTableWithChan(RR, m, power0, power1 nat, k0 Wo
 			// squaredPower, temp = temp, squaredPower
 		}
 	}
+	fmt.Println("test for y[0]------------>")
+	StatforInt(y[0])
 	duration := time.Now().UTC().Sub(startingTime)
+	fmt.Println("inside multimontgomeryWithPreComputeTableWithChan, len(y) = ", len(y))
 	fmt.Printf("Running multimontgomeryWithPreComputeTableWithChan Takes [%.3f] Seconds \n", duration.Seconds())
 	fmt.Println("len(y) = ", len(y))
 	c <- z
@@ -854,7 +858,20 @@ func fourfoldExpNNMontgomeryWithPreComputeTableParallel(x, m nat, y []*Int, pret
 
 	// Zero round, find common bits of the four values
 	//fmt.Println("test here, len = ", len([]nat{y[0].abs, y[1].abs, y[2].abs, y[3].abs}))
+	fmt.Println("test before fourfold gcb")
+	StatforInt(y[0].abs)
+	StatforInt(y[1].abs)
+	StatforInt(y[2].abs)
+	StatforInt(y[3].abs)
 	yNew := fourfoldGcb([]nat{y[0].abs, y[1].abs, y[2].abs, y[3].abs})
+	fmt.Println("test after fourfold gcb")
+	fmt.Println("------yNew[0]--------")
+	StatforInt(yNew[0])
+	StatforInt(yNew[1])
+	StatforInt(yNew[2])
+	StatforInt(yNew[3])
+	fmt.Println("test for the new common bits")
+	StatforInt(yNew[4])
 	// First round, find common bits of the three values
 	var cm012, cm013, cm023, cm123 nat
 	cm012 = threefoldGcb(yNew[:3])
@@ -869,6 +886,18 @@ func fourfoldExpNNMontgomeryWithPreComputeTableParallel(x, m nat, y []*Int, pret
 	yNew[1], yNew[3], cm13 = gcb(yNew[1], yNew[3])
 	yNew[0], yNew[3], cm03 = gcb(yNew[0], yNew[3])
 	yNew[1], yNew[2], cm12 = gcb(yNew[1], yNew[2])
+	fmt.Println("test after the bitwise gcb")
+	fmt.Println("------yNew[0]--------")
+	StatforInt(yNew[0])
+	StatforInt(yNew[1])
+	StatforInt(yNew[2])
+	StatforInt(yNew[3])
+	fmt.Println("test for the new common bits")
+	fmt.Println("------cm01--------")
+	StatforInt(cm01)
+	StatforInt(cm02)
+	StatforInt(cm03)
+	StatforInt(cm13)
 	c1 := make(chan []nat)
 	c2 := make(chan []nat)
 	c3 := make(chan []nat)
@@ -878,6 +907,7 @@ func fourfoldExpNNMontgomeryWithPreComputeTableParallel(x, m nat, y []*Int, pret
 	go multimontgomeryWithPreComputeTableWithChan(RR, m, powers[0], powers[1], k0, numWords, yNew[2:4], pretable, c2)
 	go multimontgomeryWithPreComputeTableWithChan(RR, m, powers[0], powers[1], k0, numWords, []nat{yNew[4], cm012, cm013, cm023, cm123}, pretable, c3)
 	go multimontgomeryWithPreComputeTableWithChan(RR, m, powers[0], powers[1], k0, numWords, []nat{cm01, cm23, cm02, cm13, cm03, cm12}, pretable, c4)
+
 	z1 := <-c1
 	z2 := <-c2
 	z3 := <-c3
@@ -993,4 +1023,26 @@ func fourfoldExpNNMontgomeryWithPreComputeTableParallel(x, m nat, y []*Int, pret
 // GetWidth returns the width of uint in this system
 func GetWidth() int {
 	return _W
+}
+
+func StatforInt(input nat) {
+	fmt.Println("Nat len of input = ", len(input))
+	var counter uint64
+	for i := range input {
+		counter += Bit1Counter(input[i])
+	}
+	fmt.Println("Input has bit '1' = ", counter)
+}
+
+func Bit1Counter(input Word) uint64 {
+	var ret uint64
+	ret = 0
+	var mask uint
+	for i := 0; i < 32; i++ {
+		mask = uint(1 << i)
+		if (uint(input) & mask) == mask {
+			ret++
+		}
+	}
+	return ret
 }
